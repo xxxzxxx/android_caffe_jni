@@ -43,15 +43,6 @@ public final class CaffeMobile {
 	}
 
 	/*
-	 * public static final File kBaseDir = new
-	 * File(Environment.getExternalStorageDirectory() + "/caffe_mobile"); public
-	 * static final File kModelProto = new File(kBaseDir , "deployF.prototxt");
-	 * public static final File kMeanProto = new File(kBaseDir ,
-	 * "/palm.binaryproto"); public static final File kModelBinary = new
-	 * File(kBaseDir , "finetune_7000.caffemodel"); public static final float[]
-	 * kMeanValues = {104, 117, 123}; public static final float kScale = 0.0f;
-	 * public final static String kBlobNames = "prob";
-	 */
 	public static final String kModelProtoName = "deploy.prototxt";
 	public static final String kModelBinaryName = "bvlc_reference_caffenet.caffemodel";
 	public static final File kBaseDir = new File(
@@ -61,7 +52,113 @@ public final class CaffeMobile {
 	public static final float[] kMeanValues = { 104, 117, 123 };
 	public static final float kScale = 0.0f;
 	public final static String kBlobNames = "prob";
+	*/
+	public static class Config
+	{
+		public static final String kModelProtoName = "deploy.prototxt";
+		public static final String kModelBinaryName = "bvlc_reference_caffenet.caffemodel";
+		public static final File kBaseDir = new File(
+				Environment.getExternalStorageDirectory() + "/caffe_mobile/bvlc_reference_caffenet");
+		public static final File kModelProto = new File(kBaseDir, kModelProtoName);
+		public static final File kModelBinary = new File(kBaseDir, kModelBinaryName);
+		public static final float[] kMeanValues = { 104, 117, 123 };
+		public static final float kScale = 0.0f;
+		public final static String kBlobNames = "prob";
+		/** */
+		private final File modelProto;
+		/** */
+		private final File meanProto;
+		/** */
+		private final float[] meanValues;
+		/** */
+		private final File modelBinary;
+		/** */
+		private final float scale;
+		
+		public Config()
+		{
+			this.modelProto = kModelProto;
+			this.modelBinary = kModelBinary;
+			this.scale = kScale;
+			this.meanProto = null;
+			this.meanValues = kMeanValues;
+		}
 
+		public Config(final File baseDir) {
+			if (!baseDir.isDirectory()) {
+				throw new RuntimeException("baseDir is not directory");
+			}
+			this.scale = kScale;
+			this.meanProto = null;
+			this.meanValues = kMeanValues;
+			this.modelProto = new File(baseDir, kModelProtoName);
+			if (!modelProto.exists()) {
+				throw new RuntimeException("modelProto is not exists");
+			} else if (modelProto.isDirectory()) {
+				throw new RuntimeException("modelProto is directory");
+			}
+			this.modelBinary = new File(baseDir, kModelBinaryName);
+			if (!modelBinary.exists()) {
+				throw new RuntimeException("modelBinary is not exists");
+			} else if (modelBinary.isDirectory()) {
+				throw new RuntimeException("modelBinary is directory");
+			}
+		}
+		public Config(final File modelProto, final File modelBinary, final float scale, final float[] meanValues) {
+			if (modelProto.isDirectory()) {
+				throw new RuntimeException("modelProto is directory!");
+			}
+			if (modelBinary.isDirectory()) {
+				throw new RuntimeException("modelBinary is directory!");
+			}
+			this.modelProto = modelProto;
+			this.modelBinary = modelBinary;
+			this.scale = scale;
+			this.meanValues = meanValues;
+			this.meanProto = null;
+		}
+		
+		public Config(final File modelProto, final File modelBinary, final float scale, final File meanProto)
+		{
+			if (modelProto.isDirectory()) {
+				throw new RuntimeException("modelProto is directory!");
+			}
+			if (modelBinary.isDirectory()) {
+				throw new RuntimeException("modelBinary is directory!");
+			}
+			if (meanProto.isDirectory()) {
+				throw new RuntimeException("meanProto is directory!");
+			}
+			this.modelProto = modelProto;
+			this.modelBinary = modelBinary;
+			this.scale = scale;
+			this.meanValues = null;
+			this.meanProto = meanProto;
+		}
+		
+
+		public File getModelProto() {
+			return modelProto;
+		}
+
+		public File getMeanProto() {
+			return meanProto;
+		}
+
+		public float[] getMeanValues() {
+			return meanValues;
+		}
+
+		public File getModelBinary() {
+			return modelBinary;
+		}
+
+		public float getScale() {
+			return scale;
+		}
+
+	}
+	
 	private long objectAddress = 0;
 
 	/**
@@ -256,62 +353,47 @@ public final class CaffeMobile {
 	}
 
 	/** */
-	private final File modelProto;
-	/** */
-	private final File meanProto;
-	/** */
-	private final float[] meanValues;
-	/** */
-	private final File modelBinary;
-	/** */
-	private final float scale;
-	/** */
 	private static CaffeMobile instance = null;
 	/** */
 	private boolean setuped = false;
 	/** */
 	private SetupTask setupTask = null;
-
+	/** */
+	private final Config config;
 	/**
 	 * @throws CreateInstanceException
 	 */
 	public CaffeMobile() throws CreateInstanceException {
+		this.config = new Config();
 		this.objectAddress = CreateCaffeMobile();
 		if (0 == this.objectAddress) {
 			throw new CreateInstanceException();
 		}
-		this.modelProto = kModelProto;
-		this.modelBinary = kModelBinary;
-		this.scale = kScale;
-		this.meanProto = null;
-		this.meanValues = kMeanValues;
+	}
+
+	/**
+	 * @throws CreateInstanceException
+	 */
+	public CaffeMobile(final Config config) throws CreateInstanceException {
+		if (config == null)
+		{
+			throw new NullPointerException("config is null.");
+		}
+		this.config = config;
+		this.objectAddress = CreateCaffeMobile();
+		if (0 == this.objectAddress) {
+			throw new CreateInstanceException();
+		}
 	}
 
 	/**
 	 * @throws CreateInstanceException
 	 */
 	public CaffeMobile(final File baseDir) throws CreateInstanceException {
+		this.config = new Config(baseDir);
 		this.objectAddress = CreateCaffeMobile();
-		if (!baseDir.isDirectory()) {
-			throw new RuntimeException("baseDir is not directory");
-		}
 		if (0 == this.objectAddress) {
 			throw new CreateInstanceException();
-		}
-		this.scale = kScale;
-		this.meanProto = null;
-		this.meanValues = kMeanValues;
-		this.modelProto = new File(baseDir, kModelProtoName);
-		if (!modelProto.exists()) {
-			throw new RuntimeException("modelProto is not exists");
-		} else if (modelProto.isDirectory()) {
-			throw new RuntimeException("modelProto is directory");
-		}
-		this.modelBinary = new File(baseDir, kModelBinaryName);
-		if (!modelBinary.exists()) {
-			throw new RuntimeException("modelBinary is not exists");
-		} else if (modelBinary.isDirectory()) {
-			throw new RuntimeException("modelBinary is directory");
 		}
 	}
 
@@ -326,21 +408,11 @@ public final class CaffeMobile {
 	 */
 	public CaffeMobile(final File modelProto, final File modelBinary, final float scale, final float[] meanValues)
 			throws CreateInstanceException {
+		this.config = new Config(modelProto,modelBinary,scale,meanValues);
 		this.objectAddress = CreateCaffeMobile();
 		if (0 == this.objectAddress) {
 			throw new CreateInstanceException();
 		}
-		if (modelProto.isDirectory()) {
-			throw new RuntimeException("modelProto is directory!");
-		}
-		if (modelBinary.isDirectory()) {
-			throw new RuntimeException("modelBinary is directory!");
-		}
-		this.modelProto = modelProto;
-		this.modelBinary = modelBinary;
-		this.scale = scale;
-		this.meanValues = meanValues;
-		this.meanProto = null;
 	}
 
 	/**
@@ -353,25 +425,13 @@ public final class CaffeMobile {
 	 * @throws CreateInstanceException
 	 */
 	public CaffeMobile(final File modelProto, final File modelBinary, final float scale, final File meanProto)
-			throws CreateInstanceException {
+			throws CreateInstanceException 
+	{
+		this.config = new Config(modelProto,modelBinary,scale,meanProto);
 		this.objectAddress = CreateCaffeMobile();
 		if (0 == this.objectAddress) {
 			throw new CreateInstanceException();
 		}
-		if (modelProto.isDirectory()) {
-			throw new RuntimeException("modelProto is directory!");
-		}
-		if (modelBinary.isDirectory()) {
-			throw new RuntimeException("modelBinary is directory!");
-		}
-		if (meanProto.isDirectory()) {
-			throw new RuntimeException("meanProto is directory!");
-		}
-		this.modelProto = modelProto;
-		this.modelBinary = modelBinary;
-		this.scale = scale;
-		this.meanValues = null;
-		this.meanProto = meanProto;
 	}
 
 	/**
@@ -384,20 +444,11 @@ public final class CaffeMobile {
 	 * @return
 	 * @throws Throwable
 	 */
-	private static synchronized CaffeMobile createNewInstance(final File modelProto, final File modelBinary,
-			final float scale, final File meanProto, final float[] meanValues) throws Throwable {
+	private static synchronized CaffeMobile createNewInstance(final Config config) throws Throwable {
 		if (instance != null) {
 			throw new Throwable("created static instance.");
-		} else if (modelProto == null && modelBinary == null && meanProto == null) {
-			instance = new CaffeMobile();
 		} else {
-			if (meanValues == null && meanProto == null) {
-				throw new Throwable("mean values is null!!");
-			} else if (meanValues == null) {
-				instance = new CaffeMobile(modelProto, modelBinary, scale, meanProto);
-			} else {
-				instance = new CaffeMobile(modelProto, modelBinary, scale, meanValues);
-			}
+			instance = new CaffeMobile(config);
 		}
 		return instance;
 	}
@@ -412,34 +463,8 @@ public final class CaffeMobile {
 	 * @return
 	 * @throws Throwable
 	 */
-	public static CaffeMobile createInstance(final File modelProto, final File modelBinary, final float scale,
-			final File meanProto) throws Throwable {
-		return createNewInstance(modelProto, modelBinary, scale, meanProto, null);
-	}
-
-	/**
-	 * createInstance
-	 * 
-	 * @param modelProto
-	 * @param modelBinary
-	 * @param scale
-	 * @param meanValues
-	 * @return
-	 * @throws Throwable
-	 */
-	public static CaffeMobile createInstance(final File modelProto, final File modelBinary, final float scale,
-			final float[] meanValues) throws Throwable {
-		return createNewInstance(modelProto, modelBinary, scale, null, meanValues);
-	}
-
-	/**
-	 * createInstance
-	 * 
-	 * @return
-	 * @throws Throwable
-	 */
-	public static CaffeMobile createInstance() throws Throwable {
-		return createNewInstance(null, null, 0f, null, null);
+	public static CaffeMobile createInstance(final Config config) throws Throwable {
+		return createNewInstance(config);
 	}
 
 	/**
@@ -453,14 +478,14 @@ public final class CaffeMobile {
 
 	private void internal_setup() {
 		if (setuped == false) {
-			LoadModel(this.objectAddress, modelProto.getPath(), modelBinary.getPath());
-			if (meanProto != null) {
-				setMean(meanProto);
-			} else if (meanValues != null) {
-				setMean(meanValues);
+			LoadModel(this.objectAddress, config.getModelProto().getPath(), config.getModelBinary().getPath());
+			if (config.getMeanProto() != null) {
+				setMean(config.getMeanProto());
+			} else if (config.getMeanValues() != null) {
+				setMean(config.getMeanValues());
 			}
-			if (kScale != scale) {
-				SetScale(this.objectAddress, scale);
+			if (Config.kScale != config.getScale()) {
+				SetScale(this.objectAddress, config.getScale());
 			}
 			setuped = true;
 		}
